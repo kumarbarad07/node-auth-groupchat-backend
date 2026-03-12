@@ -11,7 +11,8 @@ const GroupMember = require("../models/GroupMember");
 
 const {
     User,
-    userLogin
+    userLogin,
+    userNameLogin
 } = require('../validators/authValidator');
 
 exports.registerUser = async (req, res) => {
@@ -247,6 +248,62 @@ exports.userLogin = async (req, res) => {
         );
     } catch (error) {
         logger.error("Error During User Login", error);
+        return errorResponse(res, error.message, "Login Failed", 500);
+    }
+};
+
+// LOGIN WITH USERNAME
+exports.userLoginWithUserName = async (req, res) => {
+    try {
+        const { userName, password } = req.body;
+
+        const { error } = userNameLogin.validate(req.body);
+        if (error) {
+            return errorResponse(
+                res,
+                error.details[0].message,
+                "Validation failed",
+                401
+            );
+        }
+
+        const existingUser = await UserAccount.findOne({ userName });
+        if (!existingUser) {
+            return errorResponse(res, "User not found", "User not found", 401);
+        }
+
+        const isMatch = await bcrypt.compare(
+            password,
+            existingUser.password
+        );
+
+        if (!isMatch) {
+            return errorResponse(res, "Invalid Credentials", 401);
+        }
+
+        const accessToken = generateToken({
+            id: existingUser._id,
+            email: existingUser.email,
+            role: existingUser.role,
+        });
+
+        const refreshToken = generateRefreshToken({
+            id: existingUser._id,
+        });
+
+        existingUser.lastLoginAt = new Date();
+        await existingUser.save();
+
+        return successResponse(
+            res,
+            {
+                accessToken,
+                refreshToken,
+            },
+            "User Login Successful"
+        );
+    } catch (error) {
+        logger.error("Error During Username Login", error);
         return errorResponse(res, error.message, "Login Failed", 500);
     }
 };

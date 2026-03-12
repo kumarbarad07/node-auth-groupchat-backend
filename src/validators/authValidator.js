@@ -22,7 +22,13 @@ const userLogin = Joi.object({
   password: Joi.string().min(6).required()
 })
 
+const userNameLogin = Joi.object({
+  userName: Joi.string().min(6).required(),
+  password: Joi.string().min(6).required(),
+})
+
 module.exports = {
     User,
-    userLogin
+    userLogin,
+    userNameLogin
 }
